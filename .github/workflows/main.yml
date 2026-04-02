@@ -16,20 +16,19 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🛠️ Setup Android Project & Gradle
+      - name: 🛠️ Setup Android Project Structure
         run: |
-          # সব প্রয়োজনীয় ফোল্ডার বানানো হচ্ছে
           mkdir -p app/src/main/assets
           mkdir -p app/src/main/java/com/rasel/rasfocus
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/xml
 
-          # তোমার ৩টি ফাইল কপি করা হচ্ছে (মেইন ফোল্ডার থেকে)
+          # তোমার ৩টি ফাইল কপি করা হচ্ছে
           find . -maxdepth 1 -name "index.html" -exec cp {} app/src/main/assets/ \;
           find . -maxdepth 1 -name "BlockerService.java" -exec cp {} app/src/main/java/com/rasel/rasfocus/ \;
           find . -maxdepth 1 -name "MainActivity.java" -exec cp {} app/src/main/java/com/rasel/rasfocus/ \;
 
-          # অ্যান্ড্রয়েড কনফিগারেশন ফাইল তৈরি
+          # অ্যান্ড্রয়েড ম্যানিফেস্ট
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.rasel.rasfocus">
@@ -58,19 +57,19 @@ jobs:
 
           echo '<resources><string name="accessibility_desc">RasFocus Blocker Active</string></resources>' > app/src/main/res/values/strings.xml
 
-          # নতুন নিয়মে Gradle ফাইল তৈরি
+          # প্রজেক্ট লেভেল বিল্ড ফাইল (Modern Syntax)
           cat << 'EOF' > build.gradle
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.1.0' }
-          }
-          allprojects {
-              repositories { google(); mavenCentral() }
+          plugins {
+              id 'com.android.application' version '8.1.0' apply false
+              id 'com.android.library' version '8.1.0' apply false
           }
           EOF
 
+          # অ্যাপ লেভেল বিল্ড ফাইল (Modern Syntax)
           cat << 'EOF' > app/build.gradle
-          apply plugin: 'com.android.application'
+          plugins {
+              id 'com.android.application'
+          }
           android {
               compileSdk 34
               namespace 'com.rasel.rasfocus'
@@ -88,13 +87,13 @@ jobs:
 
       - name: 🚀 Build APK with Gradle Wrapper
         run: |
-          # সঠিক গ্রেডল ভার্সন সেটআপ
-          gradle wrapper --gradle-version 8.2 --distribution-type all
+          # গ্রেডল র‍্যাপার জেনারেট করে বিল্ড শুরু করা
+          gradle wrapper --gradle-version 8.2
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: 📥 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RasFocus-Hybrid-V2
+          name: RasFocus-Final-Build
           path: app/build/outputs/apk/debug/*.apk
