@@ -1,0 +1,122 @@
+name: RasFocus Hybrid APK Builder
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🛠️ Create Android Project Structure
+        run: |
+          # সব প্রয়োজনীয় ফোল্ডার বানানো হচ্ছে
+          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/java/com/rasel/rasfocus
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/drawable
+
+          # ১. তোমার দেওয়া ফাইলগুলো সঠিক জায়গায় কপি করা হচ্ছে
+          cp index.html app/src/main/assets/
+          cp BlockerService.java app/src/main/java/com/rasel/rasfocus/
+          cp MainActivity.java app/src/main/java/com/rasel/rasfocus/
+
+          # ২. অ্যান্ড্রয়েড ম্যানিফেস্ট (Permissions & Services)
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.rasel.rasfocus">
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+              
+              <application 
+                  android:label="RasFocus+" 
+                  android:icon="@mipmap/ic_launcher"
+                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+                  
+                  <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+
+                  <service android:name=".BlockerService" 
+                      android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" 
+                      android:exported="false">
+                      <intent-filter>
+                          <action android:name="android.accessibilityservice.AccessibilityService" />
+                      </intent-filter>
+                      <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service_config" />
+                  </service>
+              </application>
+          </manifest>
+          EOF
+
+          # ৩. অ্যাক্সেসিবিলিটি কনফিগারেশন
+          cat << 'EOF' > app/src/main/res/xml/accessibility_service_config.xml
+          <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+              android:accessibilityEventTypes="typeWindowContentChanged|typeWindowStateChanged"
+              android:accessibilityFeedbackType="feedbackGeneric"
+              android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
+              android:canRetrieveWindowContent="true"
+              android:description="@string/accessibility_desc" />
+          EOF
+
+          # ৪. স্ট্রিং এবং রিসোর্স ফাইল
+          cat << 'EOF' > app/src/main/res/values/strings.xml
+          <resources>
+              <string name="app_name">RasFocus+</string>
+              <string name="accessibility_desc">RasFocus পাহারাদার সক্রিয় আছে।</string>
+          </resources>
+          EOF
+
+          # ৫. বিল্ড কনফিগারেশন (Gradle)
+          cat << 'EOF' > app/build.gradle
+          plugins { id 'com.android.application' }
+          android {
+              compileSdk 34
+              namespace 'com.rasel.rasfocus'
+              defaultConfig { 
+                  applicationId "com.rasel.rasfocus"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes { release { minifyEnabled false } }
+          }
+          EOF
+
+          cat << 'EOF' > build.gradle
+          buildscript { 
+              repositories { google(); mavenCentral() } 
+              dependencies { classpath 'com.android.tools.build:gradle:8.1.0' } 
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          EOF
+
+          echo "include ':app'" > settings.gradle
+
+      - name: 🚀 Setup Gradle & Build APK
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.2
+
+      - name: 🛠️ Run Build Command
+        run: chmod +x gradlew && ./gradlew assembleDebug
+
+      - name: 📥 Download Your RasFocus Hybrid APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RasFocus-White-Hybrid
+          path: app/build/outputs/apk/debug/*.apk
