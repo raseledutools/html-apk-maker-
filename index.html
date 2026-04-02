@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RasFocus+</title>
+    <style>
+        /* --- Android Material Light Theme --- */
+        :root {
+            --bg-color: #f4f6f9;
+            --surface: #ffffff;
+            --primary: #2196F3; /* Android Blue */
+            --primary-dark: #1976D2;
+            --success: #4CAF50;
+            --danger: #F44336;
+            --text-main: #202124;
+            --text-muted: #5f6368;
+            --border: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); overflow: hidden; user-select: none; }
+
+        /* Page System */
+        .page { display: none; height: 100vh; padding: 20px; padding-bottom: 90px; flex-direction: column; overflow-y: auto; animation: fadeUp 0.3s ease-out; }
+        .page.active { display: flex; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-bottom: 20px; }
+        .logo-text { font-size: 26px; font-weight: 800; color: var(--primary); letter-spacing: 1px; }
+
+        /* Material Cards */
+        .card { background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: var(--text-main); }
+        .card-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 15px; }
+
+        /* Input & Forms */
+        .input-field { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-color); font-size: 16px; margin-bottom: 15px; outline: none; }
+        .input-field:focus { border-color: var(--primary); }
+
+        /* Buttons */
+        .btn { background: var(--primary); color: white; font-size: 18px; font-weight: bold; padding: 18px; width: 100%; border: none; border-radius: 16px; box-shadow: 0 4px 10px rgba(33,150,243,0.3); transition: 0.2s; margin-bottom: 15px; }
+        .btn:active { transform: scale(0.96); }
+        .btn-success { background: var(--success); box-shadow: 0 4px 10px rgba(76,175,80,0.3); }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); box-shadow: none; }
+
+        /* --- Scrollable Time Picker (Light Theme) --- */
+        .picker-wrapper { position: relative; height: 200px; display: flex; justify-content: space-between; background: var(--surface); border-radius: 16px; padding: 10px; margin: 20px 0; border: 1px solid var(--border); overflow: hidden; }
+        .picker-highlight { position: absolute; top: 50%; left: 10px; right: 10px; height: 50px; transform: translateY(-50%); background: rgba(33,150,243,0.1); border-radius: 8px; pointer-events: none; }
+        .picker-col { flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
+        .picker-col::-webkit-scrollbar { display: none; }
+        .picker-item { height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: var(--text-muted); scroll-snap-align: center; transition: 0.2s; }
+        .picker-item.active { color: var(--primary); font-size: 32px; }
+        .picker-labels { display: flex; justify-content: space-around; color: var(--text-muted); font-size: 12px; font-weight: bold; margin-bottom: -15px; padding: 0 20px; }
+
+        /* --- Circular Spinner for Active Session --- */
+        .spinner-container { display: flex; justify-content: center; align-items: center; margin: 40px 0; position: relative; }
+        .circular-progress { width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(var(--primary) 360deg, #e0e0e0 0deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(33,150,243,0.2); }
+        .inner-circle { width: 220px; height: 220px; border-radius: 50%; background-color: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .timer-text { font-size: 40px; font-weight: bold; color: var(--text-main); }
+        .timer-label { font-size: 16px; color: var(--text-muted); }
+
+        /* --- Bottom Navigation --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 80px; background: var(--surface); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--border); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 33%; color: var(--text-muted); font-size: 12px; font-weight: bold; padding: 10px; }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 24px; margin-bottom: 5px; }
+
+        /* List Items (Apps) */
+        .app-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .app-info { display: flex; align-items: center; font-size: 16px; font-weight: bold; }
+        .app-icon { width: 40px; height: 40px; background: var(--border); border-radius: 10px; margin-right: 15px; display: flex; align-items:center; justify-content:center; font-size: 20px;}
+        
+        /* Blocked Overlay */
+        #blocked-page { background: var(--danger); color: white; justify-content: center; align-items: center; text-align: center; z-index: 999; }
+        #blocked-page h1 { font-size: 60px; font-weight: 900; margin-bottom: 20px; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="home-page" class="page active">
+        <div class="header">
+            <div class="logo-text">RasFocus+</div>
+            <div style="font-size: 24px;">🔒</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Welcome back, Rasel</div>
+            <div class="card-subtitle">Secure your device and stay productive.</div>
+            <input type="password" class="input-field" placeholder="Enter App Password">
+            <button class="btn btn-outline">UNLOCK SETTINGS</button>
+        </div>
+
+        <div class="card" style="margin-top: 20px; text-align: center; padding: 40px 20px;">
+            <div style="font-size: 50px; margin-bottom: 20px;">☕</div>
+            <div class="card-title" style="font-size: 22px;">Ready to Focus?</div>
+            <button class="btn btn-success" style="margin-top: 15px; font-size: 20px;" onclick="navigate('setup-page')">TAKE A BREAK</button>
+        </div>
+    </div>
+
+    <div id="setup-page" class="page">
+        <div class="header">
+            <div class="card-title" style="margin:0; font-size: 22px;">Set Duration</div>
+            <div onclick="navigate('home-page')" style="font-size: 24px;">✖️</div>
+        </div>
+        
+        <div class="picker-labels"><span>DAYS</span><span>HOURS</span><span>MINS</span></div>
+        <div class="picker-wrapper">
+            <div class="picker-highlight"></div>
+            <div class="picker-col" id="col-days" onscroll="updateActiveItem('col-days')"></div>
+            <div class="picker-col" id="col-hours" onscroll="updateActiveItem('col-hours')"></div>
+            <div class="picker-col" id="col-mins" onscroll="updateActiveItem('col-mins')"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Allowed Apps (Whitelist)</div>
+            <div class="card-subtitle">Select apps you can use during the break.</div>
+            <button class="btn btn-outline" style="padding: 12px; font-size: 16px;">+ SELECT FROM INSTALLED APPS</button>
+        </div>
+
+        <div style="flex:1;"></div>
+        <button class="btn btn-success" onclick="startSession()">🚀 START STRICT MODE</button>
+    </div>
+
+    <div id="session-page" class="page">
+        <div class="header" style="justify-content: center;">
+            <div class="logo-text" style="color: var(--success);">Session Active</div>
+        </div>
+
+        <div class="spinner-container">
+            <div class="circular-progress">
+                <div class="inner-circle">
+                    <div class="timer-text" id="countdown-display">01:30:00</div>
+                    <div class="timer-label">Remaining Time</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="text-align: center; margin-top: 30px;">
+            <div class="card-title">You can only use allowed apps.</div>
+            <div class="card-subtitle">Settings and other apps are blocked.</div>
+            <button class="btn" style="width: 80px; height: 80px; border-radius: 40px; font-size: 30px; margin: 20px auto;">📱</button>
+            <div style="font-weight: bold; color: var(--primary);">View Whitelisted Apps</div>
+        </div>
+    </div>
+
+    <div id="whitelist-page" class="page">
+        <div class="header"><div class="logo-text">✅ Whitelist</div></div>
+        <div class="card">
+            <input type="text" class="input-field" placeholder="Enter custom URL (e.g. docs.google.com)">
+            <button class="btn" style="padding: 12px;">ADD WEBSITE</button>
+        </div>
+        <div class="card-title">Selected Apps</div>
+        <div class="card">
+            <div class="app-item"><div class="app-info"><div class="app-icon">📚</div> Dictionary</div> <input type="checkbox" checked></div>
+            <div class="app-item"><div class="app-info"><div class="app-icon">📝</div> Notepad</div> <input type="checkbox" checked></div>
+            <div class="app-item" style="border:none;"><div class="app-info"><div class="app-icon">🌍</div> Wikipedia</div> <input type="checkbox" checked></div>
+        </div>
+    </div>
+
+    <div id="blacklist-page" class="page">
+        <div class="header"><div class="logo-text" style="color: var(--danger);">🚫 Blacklist</div></div>
+        <div class="card">
+            <input type="text" class="input-field" placeholder="Enter custom URL or Keyword">
+            <button class="btn" style="background: var(--danger); padding: 12px;">BLOCK ITEM</button>
+        </div>
+        <div class="card-title">Blocked Apps</div>
+        <div class="card">
+            <div class="app-item"><div class="app-info"><div class="app-icon">📘</div> Facebook</div> <input type="checkbox" checked></div>
+            <div class="app-item" style="border:none;"><div class="app-info"><div class="app-icon">📸</div> Instagram</div> <input type="checkbox" checked></div>
+        </div>
+    </div>
+
+    <div id="limits-page" class="page">
+        <div class="header"><div class="logo-text" style="color: #FF9800;">⏱️ App Limits</div></div>
+        <div class="card-subtitle">Set daily usage limits for individual apps.</div>
+        
+        <div class="card">
+            <div class="app-item" style="flex-direction: column; align-items: flex-start;">
+                <div class="app-info" style="margin-bottom: 10px;"><div class="app-icon">▶️</div> YouTube</div>
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <input type="number" class="input-field" placeholder="Hr" style="margin:0;">
+                    <input type="number" class="input-field" placeholder="Min" style="margin:0;">
+                    <button class="btn" style="margin:0; width: auto; padding: 0 20px;">SET</button>
+                </div>
+            </div>
+            <div class="app-item" style="flex-direction: column; align-items: flex-start; border:none;">
+                <div class="app-info" style="margin-bottom: 10px;"><div class="app-icon">💬</div> WhatsApp</div>
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <input type="number" class="input-field" placeholder="Hr" style="margin:0;">
+                    <input type="number" class="input-field" placeholder="Min" style="margin:0;">
+                    <button class="btn" style="margin:0; width: auto; padding: 0 20px;">SET</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blocked-page" class="page">
+        <h1>🛑<br>BLOCKED</h1>
+        <p style="font-size: 22px; font-weight: bold; line-height: 1.6; margin: 30px 0;">
+            "হে মুমিনগণ! তোমরা নিজেদেরকে এবং তোমাদের পরিবার-পরিজনকে রক্ষা কর অগ্নি হতে..."<br><br>
+            <span style="font-size:18px; font-weight:normal;">- সূরা আত-তাহরীম: ৬</span>
+        </p>
+        <button class="btn btn-outline" style="border-color:white; color:white; margin-top: 30px;" onclick="navigate('home-page')">RETURN TO SAFETY</button>
+    </div>
+
+    <div class="bottom-nav" id="bottom-nav">
+        <div class="nav-item active" onclick="navTo('home-page', this)">
+            <div class="nav-icon">🏠</div><span>Home</span>
+        </div>
+        <div class="nav-item" onclick="navTo('whitelist-page', this)">
+            <div class="nav-icon">✅</div><span>Whitelist</span>
+        </div>
+        <div class="nav-item" onclick="navTo('blacklist-page', this)">
+            <div class="nav-icon">🚫</div><span>Blacklist</span>
+        </div>
+        <div class="nav-item" onclick="navTo('limits-page', this)">
+            <div class="nav-icon">⏱️</div><span>Limits</span>
+        </div>
+    </div>
+
+    <script>
+        // Page Navigation
+        function navigate(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            // Hide bottom nav in setup, session, or blocked pages
+            const bNav = document.getElementById('bottom-nav');
+            if(pageId === 'setup-page' || pageId === 'session-page' || pageId === 'blocked-page') {
+                bNav.style.display = 'none';
+            } else {
+                bNav.style.display = 'flex';
+            }
+
+            if(pageId === 'setup-page') setTimeout(initPicker, 100);
+        }
+
+        // Bottom Nav Highlight Logic
+        function navTo(pageId, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            navigate(pageId);
+        }
+
+        // --- Picker Logic ---
+        function populateCol(colId, maxVal) {
+            const col = document.getElementById(colId);
+            col.innerHTML = '<div class="picker-item"></div><div class="picker-item"></div>';
+            for(let i = 0; i <= maxVal; i++) col.innerHTML += `<div class="picker-item" data-val="${i}">${i < 10 ? '0'+i : i}</div>`;
+            col.innerHTML += '<div class="picker-item"></div><div class="picker-item"></div>';
+        }
+
+        function updateActiveItem(colId) {
+            const col = document.getElementById(colId);
+            const items = col.querySelectorAll('.picker-item[data-val]');
+            const index = Math.round(col.scrollTop / 50);
+            items.forEach(item => item.classList.remove('active'));
+            if(items[index]) items[index].classList.add('active');
+        }
+
+        function initPicker() {
+            populateCol('col-days', 30); populateCol('col-hours', 23); populateCol('col-mins', 59);
+            // Default scroll positions
+            setTimeout(() => {
+                document.getElementById('col-hours').scrollTo({ top: 1 * 50 });
+                document.getElementById('col-mins').scrollTo({ top: 30 * 50 });
+            }, 100);
+        }
+
+        function getSelectedTime() {
+            const getVal = (id) => parseInt(document.querySelector(`#${id} .picker-item.active`)?.getAttribute('data-val') || 0);
+            return { d: getVal('col-days'), h: getVal('col-hours'), m: getVal('col-mins') };
+        }
+
+        // --- Session Logic ---
+        let timerInterval;
+        function startSession() {
+            const t = getSelectedTime();
+            let totalSeconds = (t.d * 86400) + (t.h * 3600) + (t.m * 60);
+            
+            if(totalSeconds <= 0) { alert("Please select time!"); return; }
+            
+            navigate('session-page');
+            
+            // Bridge call to Java (to block settings & non-whitelisted apps)
+            if(typeof AndroidBridge !== "undefined") AndroidBridge.startFocusSession(totalSeconds);
+
+            // UI Countdown
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                totalSeconds--;
+                if(totalSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    navigate('home-page');
+                    if(typeof AndroidBridge !== "undefined") AndroidBridge.endFocusSession();
+                } else {
+                    let h = Math.floor(totalSeconds / 3600);
+                    let m = Math.floor((totalSeconds % 3600) / 60);
+                    let s = totalSeconds % 60;
+                    document.getElementById('countdown-display').innerText = 
+                        `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+                }
+            }, 1000);
+        }
+
+        // This function is called from Java BlockerService when adult content is detected
+        function triggerBlockScreen() {
+            navigate('blocked-page');
+        }
+    </script>
+</body>
+</html>
