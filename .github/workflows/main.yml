@@ -23,7 +23,7 @@ jobs:
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/xml
 
-          # তোমার ৩টি ফাইল কপি করা হচ্ছে
+          # ফাইলগুলো কপি করা হচ্ছে
           find . -maxdepth 1 -name "index.html" -exec cp {} app/src/main/assets/ \;
           find . -maxdepth 1 -name "BlockerService.java" -exec cp {} app/src/main/java/com/rasel/rasfocus/ \;
           find . -maxdepth 1 -name "MainActivity.java" -exec cp {} app/src/main/java/com/rasel/rasfocus/ \;
@@ -57,15 +57,34 @@ jobs:
 
           echo '<resources><string name="accessibility_desc">RasFocus Blocker Active</string></resources>' > app/src/main/res/values/strings.xml
 
-          # প্রজেক্ট লেভেল বিল্ড ফাইল (Modern Syntax)
+          # লেটেস্ট নিয়মে settings.gradle যেখানে রিপোজিটরি ডিক্লেয়ার করা হয়েছে
+          cat << 'EOF' > settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "RasFocus"
+          include ':app'
+          EOF
+
+          # প্রজেক্ট লেভেল বিল্ড ফাইল
           cat << 'EOF' > build.gradle
           plugins {
               id 'com.android.application' version '8.1.0' apply false
-              id 'com.android.library' version '8.1.0' apply false
           }
           EOF
 
-          # অ্যাপ লেভেল বিল্ড ফাইল (Modern Syntax)
+          # অ্যাপ লেভেল বিল্ড ফাইল
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
@@ -83,11 +102,8 @@ jobs:
           }
           EOF
 
-          echo "include ':app'" > settings.gradle
-
       - name: 🚀 Build APK with Gradle Wrapper
         run: |
-          # গ্রেডল র‍্যাপার জেনারেট করে বিল্ড শুরু করা
           gradle wrapper --gradle-version 8.2
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
